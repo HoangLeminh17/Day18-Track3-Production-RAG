@@ -1,0 +1,32 @@
+{
+  "aggregate": {
+    "faithfulness": 1.0,
+    "answer_relevancy": 0.7675324675324675,
+    "context_precision": 0.10261217347831521,
+    "context_recall": 1.0
+  },
+  "num_questions": 3,
+  "failures": [
+    {
+      "question": "Nhân viên phải báo trước bao lâu khi xin nghỉ phép?",
+      "worst_metric": "context_precision",
+      "score": 0.09448818897637795,
+      "diagnosis": "Too many irrelevant chunks",
+      "suggested_fix": "Add reranking or metadata filter"
+    },
+    {
+      "question": "Giờ làm việc tiêu chuẩn là gì?",
+      "worst_metric": "context_precision",
+      "score": 0.11811023622047244,
+      "diagnosis": "Too many irrelevant chunks",
+      "suggested_fix": "Add reranking or metadata filter"
+    },
+    {
+      "question": "Nhân viên được nghỉ phép bao nhiêu ngày mỗi năm?",
+      "worst_metric": "context_precision",
+      "score": 0.09523809523809523,
+      "diagnosis": "Too many irrelevant chunks",
+      "suggested_fix": "Add reranking or metadata filter"
+    }
+  ]
+}

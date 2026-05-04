@@ -1,0 +1,10 @@
+# Core Dependencies for Lab 18: Production RAG Pipeline
+python-dotenv
+openai
+sentence-transformers
+qdrant-client
+rank-bm25
+underthesea
+ragas
+datasets
+pytest

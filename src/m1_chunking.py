@@ -72,32 +72,47 @@ def chunk_semantic(text: str, threshold: float = SEMANTIC_THRESHOLD,
         List of Chunk objects grouped by semantic similarity.
     """
     metadata = metadata or {}
-    # TODO: Implement semantic chunking
-    # 1. Split text into sentences:
-    #    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+|\n\n', text) if s.strip()]
-    #
-    # 2. Encode sentences:
-    #    from sentence_transformers import SentenceTransformer
-    #    model = SentenceTransformer("all-MiniLM-L6-v2")  # fast
-    #    embeddings = model.encode(sentences)
-    #
-    # 3. Compare consecutive sentences:
-    #    from numpy import dot
-    #    from numpy.linalg import norm
-    #    def cosine_sim(a, b): return dot(a, b) / (norm(a) * norm(b))
-    #
-    # 4. Group sentences:
-    #    current_group = [sentences[0]]
-    #    for i in range(1, len(sentences)):
-    #        sim = cosine_sim(embeddings[i-1], embeddings[i])
-    #        if sim < threshold:
-    #            chunks.append(Chunk(text=" ".join(current_group), metadata=...))
-    #            current_group = []
-    #        current_group.append(sentences[i])
-    #    # Don't forget last group
-    #
-    # 5. Return chunks with metadata: {"chunk_index": i, "strategy": "semantic"}
-    return []
+    
+    # Split text into sentences
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+|\n\n', text) if s.strip()]
+    if not sentences:
+        return []
+    
+    # Encode sentences
+    from sentence_transformers import SentenceTransformer
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    embeddings = model.encode(sentences, show_progress_bar=False)
+    
+    # Cosine similarity helper
+    from numpy import dot
+    from numpy.linalg import norm
+    def cosine_sim(a, b):
+        return dot(a, b) / (norm(a) * norm(b) + 1e-8)
+    
+    # Group sentences by similarity
+    chunks = []
+    current_group = [sentences[0]]
+    
+    for i in range(1, len(sentences)):
+        sim = cosine_sim(embeddings[i-1], embeddings[i])
+        if sim < threshold:
+            # Start new chunk
+            chunks.append(Chunk(
+                text=" ".join(current_group),
+                metadata={**metadata, "chunk_index": len(chunks), "strategy": "semantic"}
+            ))
+            current_group = [sentences[i]]
+        else:
+            current_group.append(sentences[i])
+    
+    # Don't forget last group
+    if current_group:
+        chunks.append(Chunk(
+            text=" ".join(current_group),
+            metadata={**metadata, "chunk_index": len(chunks), "strategy": "semantic"}
+        ))
+    
+    return chunks
 
 
 # ─── Strategy 2: Hierarchical Chunking ──────────────────
@@ -120,23 +135,64 @@ def chunk_hierarchical(text: str, parent_size: int = HIERARCHICAL_PARENT_SIZE,
         (parents, children) — mỗi child có parent_id link đến parent.
     """
     metadata = metadata or {}
-    # TODO: Implement hierarchical chunking
-    # 1. Split text into parents:
-    #    paragraphs = text.split("\n\n")
-    #    Gom paragraphs cho đến khi đạt parent_size → 1 parent chunk
-    #    pid = f"parent_{p_index}"
-    #    parent = Chunk(text=parent_text, metadata={**metadata, "chunk_type": "parent", "parent_id": pid})
-    #
-    # 2. Split each parent into children:
-    #    Slide window child_size trên parent text
-    #    child = Chunk(text=child_text, metadata={**metadata, "chunk_type": "child"}, parent_id=pid)
-    #
-    # 3. Return (parents_list, children_list)
-    #
-    # Production pattern:
-    #   - Index CHILDREN vào vector DB (nhỏ → embedding chính xác)
-    #   - Khi retrieve child → lookup parent_id → trả parent cho LLM (đủ context)
-    return [], []
+    
+    # Step 1: Split text into parents
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    parents = []
+    children = []
+    
+    current_parent = ""
+    parent_index = 0
+    
+    for para in paragraphs:
+        if len(current_parent) + len(para) > parent_size and current_parent:
+            # Create parent chunk
+            pid = f"parent_{parent_index}"
+            parents.append(Chunk(
+                text=current_parent.strip(),
+                metadata={**metadata, "chunk_type": "parent", "parent_id": pid, "parent_index": parent_index}
+            ))
+            
+            # Create children from this parent
+            parent_text = current_parent.strip()
+            child_index = 0
+            for i in range(0, len(parent_text), child_size):
+                child_text = parent_text[i:i + child_size].strip()
+                if child_text:
+                    children.append(Chunk(
+                        text=child_text,
+                        metadata={**metadata, "chunk_type": "child", "child_index": child_index},
+                        parent_id=pid
+                    ))
+                    child_index += 1
+            
+            current_parent = ""
+            parent_index += 1
+        
+        current_parent += para + "\n\n"
+    
+    # Don't forget last parent
+    if current_parent.strip():
+        pid = f"parent_{parent_index}"
+        parents.append(Chunk(
+            text=current_parent.strip(),
+            metadata={**metadata, "chunk_type": "parent", "parent_id": pid, "parent_index": parent_index}
+        ))
+        
+        # Create children from last parent
+        parent_text = current_parent.strip()
+        child_index = 0
+        for i in range(0, len(parent_text), child_size):
+            child_text = parent_text[i:i + child_size].strip()
+            if child_text:
+                children.append(Chunk(
+                    text=child_text,
+                    metadata={**metadata, "chunk_type": "child", "child_index": child_index},
+                    parent_id=pid
+                ))
+                child_index += 1
+    
+    return parents, children
 
 
 # ─── Strategy 3: Structure-Aware Chunking ────────────────

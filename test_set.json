@@ -1,3 +1,14 @@
 [
-  {"question": "hihi cả nhà tự tạo testset bằng cơm nhé", "ground_truth": "Không kịp tạo luôn"},
+  {
+    "question": "Nhân viên được nghỉ phép bao nhiêu ngày mỗi năm?",
+    "ground_truth": "Nhân viên được phép nghỉ phép 12 ngày làm việc trong một năm."
+  },
+  {
+    "question": "Nhân viên phải báo trước bao lâu khi xin nghỉ phép?",
+    "ground_truth": "Nhân viên phải thông báo trước ít nhất 2 tuần làm việc."
+  },
+  {
+    "question": "Giờ làm việc tiêu chuẩn là gì?",
+    "ground_truth": "Giờ làm việc tiêu chuẩn là từ 8:00 sáng đến 5:00 chiều, thứ Hai đến thứ Sáu."
+  }
 ]
